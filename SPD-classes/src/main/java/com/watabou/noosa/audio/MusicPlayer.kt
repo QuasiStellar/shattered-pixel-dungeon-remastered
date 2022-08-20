@@ -41,10 +41,15 @@ object MusicPlayer {
             player?.volume = value
         }
 
-    private var trackList: Array<String>? = null
-    private lateinit var trackChances: FloatArray
+    private var trackMap: Map<String,Float> = emptyMap()
 
     private val trackQueue = ArrayList<String>()
+
+    private fun populateTrackQueue() {
+        trackMap.filterValues { Random.Float() < it }
+            .keys
+            .forEach(trackQueue::add)
+    }
 
     @JvmField
     var shuffle = false
@@ -61,7 +66,7 @@ object MusicPlayer {
         }
         stop()
         lastPlayed = asset
-        trackList = null
+        trackMap = emptyMap()
         this.looping = looping
         shuffle = false
         if (isEnabled) play(asset, null)
@@ -80,26 +85,20 @@ object MusicPlayer {
                 tracks[it] = tracks[it].replace(".ogg", ".mp3")
             }
         }
-        if (isPlaying && trackList?.size?.let(tracks.size::equals) == true) {
-            var sameList = true
-            for (i in tracks.indices) {
-                if (tracks[i] != trackList!![i] || chances[i] != trackChances[i]) {
-                    sameList = false
-                    break
-                }
-            }
-            if (sameList) return
-        }
+        // can't do it the other way, unfortunately.
+        val map = chances.zip(tracks) { c,t -> t to c }.toMap()
+        // trackMap is initialized here
+        if(isPlaying && map == trackMap) return
         stop()
         lastPlayed = null
-        trackList = tracks
-        trackChances = chances
+        trackMap = map
+        playTracks(shuffle)
+    }
+
+    @Synchronized
+    fun playTracks(shuffle: Boolean) {
         trackQueue.clear()
-        for (i in tracks.indices) {
-            if (Random.Float() < trackChances[i]) {
-                trackQueue.add(trackList!![i])
-            }
-        }
+        populateTrackQueue()
         looping = false
         this.shuffle = shuffle
         if (!isEnabled || trackQueue.isEmpty()) {
@@ -123,13 +122,11 @@ object MusicPlayer {
 
     @Synchronized
     private fun playNextTrack(music: Music) {
-        if (trackList.isNullOrEmpty() || music !== player || player!!.isLooping) {
+        if (trackMap.isEmpty() || music !== player || player!!.isLooping) {
             return
         }
         stop()
-        trackList!!.zip(trackChances.toTypedArray()) { track, chance ->
-            if(Random.Float() < chance) trackQueue.add(track)
-        }
+        populateTrackQueue()
         if (shuffle) trackQueue.shuffle()
         if (!isEnabled || trackQueue.isEmpty()) {
             return
@@ -155,7 +152,7 @@ object MusicPlayer {
     @Synchronized
     fun end() {
         lastPlayed = null
-        trackList = null
+        trackMap = emptyMap()
         stop()
     }
 
@@ -188,8 +185,8 @@ object MusicPlayer {
             if (isPlaying && !value) {
                 stop()
             } else if (!isPlaying && value) {
-                if (trackList != null) {
-                    playTracks(trackList, trackChances, shuffle)
+                if (trackMap.isNotEmpty()) {
+                    playTracks(shuffle)
                 } else lastPlayed?.let {
                     play(it, looping)
                 }
