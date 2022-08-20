@@ -20,21 +20,17 @@
  */
 package com.watabou.noosa.audio
 
-import kotlin.jvm.Synchronized
-import com.watabou.noosa.audio.Sample
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.audio.Sound
 import com.watabou.noosa.Game
-import kotlin.jvm.JvmOverloads
-import com.watabou.noosa.audio.Sample.DelayedSoundEffect
-import java.util.ArrayList
+import com.watabou.utils.getAsset
 import java.util.HashMap
 import java.util.HashSet
 import kotlin.math.max
 
 object Sample {
 
-    private var ids = HashMap<Any?, Sound>()
+    private var ids = HashMap<String, Sound>()
 
     @set:JvmName("enable")
     var isEnabled = true
@@ -43,19 +39,27 @@ object Sample {
     var globalVolume = 1f
 
     @Synchronized
-    @JvmStatic fun reset() {
+    @JvmStatic
+    fun reset() {
         ids.values.forEach(Sound::dispose)
         ids.clear()
         delayedSFX.clear()
     }
 
-    @JvmStatic @Synchronized
-    fun pause() { ids.values.forEach(Sound::pause) }
+    @JvmStatic
+    @Synchronized
+    fun pause() {
+        ids.values.forEach(Sound::pause)
+    }
 
-    @JvmStatic @Synchronized
-    fun resume() { ids.values.forEach(Sound::resume) }
+    @JvmStatic
+    @Synchronized
+    fun resume() {
+        ids.values.forEach(Sound::resume)
+    }
 
-    @JvmStatic @Synchronized
+    @JvmStatic
+    @Synchronized
     fun load(vararg assets: String) {
         val toLoad = assets.filterNot(ids::containsKey)
 
@@ -66,20 +70,25 @@ object Sample {
         object : Thread() {
             override fun run() {
                 for (asset in toLoad) {
-                    val newSound = Gdx.audio.newSound(Gdx.files.internal(asset))
+                    val newSound = Gdx.audio.newSound(getAsset(asset))
                     synchronized(this@Sample) { ids[asset] = newSound }
                 }
             }
         }.start()
     }
 
-    @JvmStatic @Synchronized
-    fun unload(src: Any?) { ids.remove(src)?.dispose() }
+    @JvmStatic
+    @Synchronized
+    fun unload(src: String) {
+        ids.remove(src)?.dispose()
+    }
 
-    @JvmStatic @JvmOverloads
-    fun play(id: Any?, volume: Float = 1f, pitch: Float = 1f) = play(id, volume, volume, pitch)
-    @JvmStatic @Synchronized
-    fun play(id: Any?, leftVolume: Float, rightVolume: Float, pitch: Float): Long {
+    @JvmStatic
+    @JvmOverloads
+    fun play(id: String, volume: Float = 1f, pitch: Float = 1f) = play(id, volume, volume, pitch)
+    @JvmStatic
+    @Synchronized
+    fun play(id: String, leftVolume: Float, rightVolume: Float, pitch: Float): Long {
         val volume = max(leftVolume, rightVolume)
         return ids[id]
             ?.takeIf {isEnabled}
@@ -87,17 +96,20 @@ object Sample {
             ?: -1
     }
 
-    private data class DelayedSoundEffect(var id: Any? = null,
-                                          var delay: Float = 0f,
-                                          var leftVol: Float = 0f,
-                                          var rightVol: Float = 0f,
-                                          var pitch: Float = 0f)
+    private data class DelayedSoundEffect(
+        var id: String,
+        var delay: Float,
+        var leftVol: Float,
+        var rightVol: Float,
+        var pitch: Float
+    )
 
-    @JvmOverloads @JvmStatic
-    fun playDelayed(id: Any?, delay: Float, volume: Float = 1f, pitch: Float = 1f) = playDelayed(id, delay, volume, volume, pitch)
+    @JvmOverloads
+    @JvmStatic
+    fun playDelayed(id: String, delay: Float, volume: Float = 1f, pitch: Float = 1f) = playDelayed(id, delay, volume, volume, pitch)
 
     @JvmStatic
-    fun playDelayed(id: Any?, delay: Float, leftVolume: Float, rightVolume: Float, pitch: Float) {
+    fun playDelayed(id: String, delay: Float, leftVolume: Float, rightVolume: Float, pitch: Float) {
         if (delay <= 0) {
             play(id, leftVolume, rightVolume, pitch)
             return

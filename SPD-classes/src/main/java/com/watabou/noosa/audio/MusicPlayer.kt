@@ -20,13 +20,12 @@
  */
 package com.watabou.noosa.audio
 
-import kotlin.jvm.Synchronized
 import com.watabou.utils.DeviceCompat
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.audio.Music
 import com.watabou.noosa.Game
 import com.watabou.utils.Random
-import java.util.*
+import com.watabou.utils.getAsset
 
 object MusicPlayer {
 
@@ -35,39 +34,42 @@ object MusicPlayer {
     private var looping = false
 
     var volume = 1f
-        @JvmName("volume") get
-        @Synchronized @JvmName("volume") set(value) {
+        @Synchronized
+        @JvmName("volume")
+        set(value) {
             field = value
             player?.volume = value
         }
 
-    @JvmField var trackList: Array<String>? = null
-    lateinit var trackChances: FloatArray
+    private var trackList: Array<String>? = null
+    private lateinit var trackChances: FloatArray
 
-    private val trackQueue = ArrayList<String?>()
-    @JvmField var shuffle = false
+    private val trackQueue = ArrayList<String>()
+
+    @JvmField
+    var shuffle = false
+
     @Synchronized
-    fun play(assetName: String?, looping: Boolean) {
+    fun play(assetName: String, looping: Boolean) {
 
         //iOS cannot play ogg, so we use an mp3 alternative instead
-        var assetName = assetName
-        if (DeviceCompat.isiOS()) {
-            assetName = assetName?.replace(".ogg", ".mp3")
-        }
+        val asset =
+            if(DeviceCompat.isiOS()) assetName.replace(".ogg", ".mp3")
+            else assetName
         if (isPlaying && lastPlayed != null && lastPlayed == assetName) {
             return
         }
         stop()
-        lastPlayed = assetName
+        lastPlayed = asset
         trackList = null
         this.looping = looping
         shuffle = false
-        if (isEnabled && assetName != null) play(assetName, null)
+        if (isEnabled) play(asset, null)
     }
 
     @Synchronized
     fun playTracks(tracks: Array<String>?, chances: FloatArray, shuffle: Boolean) {
-        if (tracks == null || tracks.isEmpty() || tracks.size != chances.size) {
+        if (tracks.isNullOrEmpty() || tracks.size != chances.size) {
             stop()
             return
         }
@@ -121,16 +123,14 @@ object MusicPlayer {
 
     @Synchronized
     private fun playNextTrack(music: Music) {
-        if (trackList?.isEmpty() != false || music !== player || player!!.isLooping) {
+        if (trackList.isNullOrEmpty() || music !== player || player!!.isLooping) {
             return
         }
         stop()
-        if (trackQueue.isEmpty()) {
-            trackList!!.zip(trackChances.toTypedArray()) { track, chance ->
-                if(Random.Float() < chance) trackQueue.add(track)
-            }
-            if (shuffle) trackQueue.shuffle()
+        trackList!!.zip(trackChances.toTypedArray()) { track, chance ->
+            if(Random.Float() < chance) trackQueue.add(track)
         }
+        if (shuffle) trackQueue.shuffle()
         if (!isEnabled || trackQueue.isEmpty()) {
             return
         }
@@ -138,11 +138,11 @@ object MusicPlayer {
     }
 
     @Synchronized
-    private fun play(track: String?, listener: Music.OnCompletionListener?) {
+    private fun play(track: String, listener: Music.OnCompletionListener?) {
         player = null // this deactives the volume setter logic.
-        kotlin.runCatching {
-            player = Gdx.audio.newMusic(Gdx.files.internal(track)).apply {
-                isLooping = this@MusicPlayer.looping
+        runCatching {
+            player = Gdx.audio.newMusic(getAsset(track)).apply {
+                isLooping = looping
                 volume = this@MusicPlayer.volume
 
                 play()
@@ -160,7 +160,9 @@ object MusicPlayer {
     }
 
     @Synchronized
-    fun pause() { player?.pause() }
+    fun pause() {
+        player?.pause()
+    }
 
     @Synchronized
     fun resume() {
@@ -179,7 +181,8 @@ object MusicPlayer {
 
     @get:Synchronized
     var isEnabled = true
-        @Synchronized @JvmName("enable")
+        @Synchronized
+        @JvmName("enable")
         set(value) {
             field = value
             if (isPlaying && !value) {
@@ -187,8 +190,8 @@ object MusicPlayer {
             } else if (!isPlaying && value) {
                 if (trackList != null) {
                     playTracks(trackList, trackChances, shuffle)
-                } else if (lastPlayed != null) {
-                    play(lastPlayed, looping)
+                } else lastPlayed?.let {
+                    play(it, looping)
                 }
             }
         }
