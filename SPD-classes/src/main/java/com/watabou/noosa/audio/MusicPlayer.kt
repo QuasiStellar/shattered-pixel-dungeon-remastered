@@ -136,9 +136,9 @@ object MusicPlayer {
 
     @Synchronized
     private fun play(track: String, listener: Music.OnCompletionListener?) {
-        player = null // this deactives the volume setter logic.
         runCatching {
-            player = Gdx.audio.newMusic(getAsset(track)).apply {
+            with(Gdx.audio.newMusic(getAsset(track))) {
+                player = this
                 isLooping = this@MusicPlayer.looping
                 volume = this@MusicPlayer.volume
 
