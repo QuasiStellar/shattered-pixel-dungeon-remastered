@@ -139,7 +139,7 @@ object MusicPlayer {
         player = null // this deactives the volume setter logic.
         runCatching {
             player = Gdx.audio.newMusic(getAsset(track)).apply {
-                isLooping = looping
+                isLooping = this@MusicPlayer.looping
                 volume = this@MusicPlayer.volume
 
                 play()
