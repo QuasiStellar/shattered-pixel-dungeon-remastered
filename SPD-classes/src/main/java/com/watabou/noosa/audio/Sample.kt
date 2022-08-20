@@ -39,26 +39,22 @@ object Sample {
     var globalVolume = 1f
 
     @Synchronized
-    @JvmStatic
     fun reset() {
-        ids.values.forEach(Sound::dispose)
+        for(sound in ids.values) sound.dispose()
         ids.clear()
         delayedSFX.clear()
     }
 
-    @JvmStatic
     @Synchronized
     fun pause() {
-        ids.values.forEach(Sound::pause)
+        for(sound in ids.values) sound.pause()
     }
 
-    @JvmStatic
     @Synchronized
     fun resume() {
-        ids.values.forEach(Sound::resume)
+        for(sound in ids.values) sound.resume()
     }
 
-    @JvmStatic
     @Synchronized
     fun load(vararg assets: String) {
         val toLoad = assets.filterNot(ids::containsKey)
@@ -77,16 +73,14 @@ object Sample {
         }.start()
     }
 
-    @JvmStatic
     @Synchronized
     fun unload(src: String) {
         ids.remove(src)?.dispose()
     }
 
-    @JvmStatic
     @JvmOverloads
     fun play(id: String, volume: Float = 1f, pitch: Float = 1f) = play(id, volume, volume, pitch)
-    @JvmStatic
+
     @Synchronized
     fun play(id: String, leftVolume: Float, rightVolume: Float, pitch: Float): Long {
         val volume = max(leftVolume, rightVolume)
@@ -103,12 +97,11 @@ object Sample {
         var rightVol: Float,
         var pitch: Float
     )
+    private val delayedSFX = HashSet<DelayedSoundEffect>()
 
     @JvmOverloads
-    @JvmStatic
     fun playDelayed(id: String, delay: Float, volume: Float = 1f, pitch: Float = 1f) = playDelayed(id, delay, volume, volume, pitch)
 
-    @JvmStatic
     fun playDelayed(id: String, delay: Float, leftVolume: Float, rightVolume: Float, pitch: Float) {
         if (delay <= 0) {
             play(id, leftVolume, rightVolume, pitch)
@@ -123,7 +116,6 @@ object Sample {
         )) }
     }
 
-    @JvmStatic
     fun update() {
         synchronized(delayedSFX) {
             if (delayedSFX.isEmpty()) return
@@ -136,6 +128,4 @@ object Sample {
             }
         }
     }
-
-    private val delayedSFX = HashSet<DelayedSoundEffect>()
 }
