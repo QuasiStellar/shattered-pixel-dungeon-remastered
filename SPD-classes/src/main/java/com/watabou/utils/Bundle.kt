@@ -289,12 +289,10 @@ class Bundle private constructor(
         fun read(stream: InputStream): Bundle {
 
             // JSONTokenizer only has a string-based constructor on Android/iOS.
-            val reader = BufferedReader(InputStreamReader(checkCompression(stream)))
-            val jsonBuilder = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) jsonBuilder.append(line + "\n")
-            var json = JSONTokener(jsonBuilder.toString()).nextValue()
-            reader.close()
+            var json = JSONTokener(buildString {
+                BufferedReader( InputStreamReader(checkCompression(stream)) )
+                    .forEachLine { append(it + "\n") }
+            }).nextValue()
 
             // If the data is an array, put it in a fresh object with the default key.
             if (json is JSONArray) json = JSONObject().put(DEFAULT_KEY, json)
@@ -320,16 +318,16 @@ class Bundle private constructor(
                 str
         }
 
-        private fun storeObject(obj: Bundlable?): JSONObject? = obj?.let {
-            val cl: Class<*> = it.javaClass
+        private fun storeObject(obj: Bundlable?): JSONObject? = obj?.javaClass
             // Skip none-static inner classes as they can't be instantiated through bundle restoring.
             // Classes which make use of none-static inner classes must manage instantiation manually.
-            if (Reflection.isMemberClass(cl) && !Reflection.isStatic(cl)) return null
-            val bundle = Bundle()
-            bundle[CLASS_NAME] = cl.name
-            it.storeInBundle(bundle)
-            bundle.data
-        }
+            ?.takeUnless { Reflection.isMemberClass(it) && !Reflection.isStatic(it) }
+            ?.let { cl ->
+                Bundle().also {
+                    it[CLASS_NAME] = cl.name
+                    obj.storeInBundle(it)
+                }.data
+            }
 
         /**
          * Adds an alias to the class.
