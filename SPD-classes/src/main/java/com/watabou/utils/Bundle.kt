@@ -298,7 +298,7 @@ class Bundle private constructor(
 
             // JSONTokenizer only has a string-based constructor on Android/iOS.
             var json = JSONTokener(buildString {
-                BufferedReader(InputStreamReader(checkCompression(stream)))
+                BufferedReader(InputStreamReader(stream.checkCompression()))
                     .forEachLine { append("$it\n") }
             }).nextValue()
 
@@ -308,22 +308,20 @@ class Bundle private constructor(
             return Bundle(json as JSONObject)
         }
 
-        private fun checkCompression(stream: InputStream): InputStream {
+        private fun InputStream.checkCompression(): InputStream {
 
-            var str = stream
-            if (!str.markSupported()) str = BufferedInputStream(str, 2)
+            if (!markSupported()) return BufferedInputStream(this, 2).checkCompression()
 
             // Determine if it's a regular or compressed file.
-            str.mark(2)
-            val header = ByteArray(2)
-            str.read(header)
-            str.reset()
+            mark(2)
+            val header = ByteArray(2).also(::read)
+            reset()
 
             // GZIP header is 0x1f8b.
             return if (header[0] == 0x1f.toByte() && header[1] == 0x8b.toByte())
-                GZIPInputStream(str, GZIP_BUFFER)
+                GZIPInputStream(this, GZIP_BUFFER)
             else
-                str
+                this
         }
 
         private fun storeObject(obj: Bundlable?): JSONObject? = obj?.javaClass
