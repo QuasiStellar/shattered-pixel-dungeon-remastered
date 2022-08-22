@@ -41,7 +41,7 @@ object MusicPlayer {
             player?.volume = value
         }
 
-    private var trackMap: Map<String,Float> = emptyMap()
+    private var trackMap: Map<String, Float> = emptyMap()
 
     private val trackQueue = ArrayList<String>()
 
@@ -59,7 +59,7 @@ object MusicPlayer {
 
         //iOS cannot play ogg, so we use an mp3 alternative instead
         val asset =
-            if(DeviceCompat.isiOS()) assetName.replace(".ogg", ".mp3")
+            if (DeviceCompat.isiOS()) assetName.replace(".ogg", ".mp3")
             else assetName
         if (isPlaying && lastPlayed != null && lastPlayed == assetName) {
             return
@@ -86,9 +86,9 @@ object MusicPlayer {
             }
         }
         // can't do it the other way, unfortunately.
-        val map = chances.zip(tracks) { c,t -> t to c }.toMap()
+        val map = chances.zip(tracks) { c, t -> t to c }.toMap()
         // trackMap is initialized here
-        if(isPlaying && map == trackMap) return
+        if (isPlaying && map == trackMap) return
         stop()
         lastPlayed = null
         trackMap = map
@@ -194,5 +194,6 @@ object MusicPlayer {
         }
 
     @get:Synchronized
-    val isPlaying get() = player?.isPlaying == true
+    val isPlaying
+        get() = player?.isPlaying == true
 }

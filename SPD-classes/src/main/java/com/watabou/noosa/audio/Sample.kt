@@ -40,19 +40,19 @@ object Sample {
 
     @Synchronized
     fun reset() {
-        for(sound in ids.values) sound.dispose()
+        for (sound in ids.values) sound.dispose()
         ids.clear()
         delayedSFX.clear()
     }
 
     @Synchronized
     fun pause() {
-        for(sound in ids.values) sound.pause()
+        for (sound in ids.values) sound.pause()
     }
 
     @Synchronized
     fun resume() {
-        for(sound in ids.values) sound.resume()
+        for (sound in ids.values) sound.resume()
     }
 
     @Synchronized
@@ -85,7 +85,7 @@ object Sample {
     fun play(id: String, leftVolume: Float, rightVolume: Float, pitch: Float): Long {
         val volume = max(leftVolume, rightVolume)
         return ids[id]
-            ?.takeIf {isEnabled}
+            ?.takeIf { isEnabled }
             ?.play(globalVolume * volume, pitch, rightVolume - leftVolume)
             ?: -1
     }
@@ -97,23 +97,29 @@ object Sample {
         var rightVol: Float,
         var pitch: Float
     )
+
     private val delayedSFX = HashSet<DelayedSoundEffect>()
 
     @JvmOverloads
-    fun playDelayed(id: String, delay: Float, volume: Float = 1f, pitch: Float = 1f) = playDelayed(id, delay, volume, volume, pitch)
+    fun playDelayed(id: String, delay: Float, volume: Float = 1f, pitch: Float = 1f) =
+        playDelayed(id, delay, volume, volume, pitch)
 
     fun playDelayed(id: String, delay: Float, leftVolume: Float, rightVolume: Float, pitch: Float) {
         if (delay <= 0) {
             play(id, leftVolume, rightVolume, pitch)
             return
         }
-        synchronized(delayedSFX) { delayedSFX.add(DelayedSoundEffect(
-            id = id,
-            delay = delay,
-            leftVol = leftVolume,
-            rightVol = rightVolume,
-            pitch = pitch,
-        )) }
+        synchronized(delayedSFX) {
+            delayedSFX.add(
+                DelayedSoundEffect(
+                    id = id,
+                    delay = delay,
+                    leftVol = leftVolume,
+                    rightVol = rightVolume,
+                    pitch = pitch,
+                )
+            )
+        }
     }
 
     fun update() {
