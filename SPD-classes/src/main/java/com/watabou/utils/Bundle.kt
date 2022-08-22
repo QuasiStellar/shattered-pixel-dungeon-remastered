@@ -79,10 +79,13 @@ class Bundle private constructor(
 
     fun getString(key: String): String = data.optString(key)
 
-    fun getClass(key: String): Class<*>? = Reflection.forName(getString(key).replace("class ", "").let { cls ->
-        if (cls == "") return null
-        aliases[cls] ?: cls
-    })
+    fun getClass(key: String): Class<*>? =
+        Reflection.forName(
+            getString(key)
+                .replace("class ", "")
+                .takeUnless(""::equals)
+                ?.let { cls -> aliases[cls] ?: cls }
+        )
 
     fun getBundle(key: String): Bundle? = data.optJSONObject(key)?.let(::Bundle)
 
@@ -94,7 +97,8 @@ class Bundle private constructor(
         }
     }
 
-    fun <E : Enum<E>> getEnum(key: String, enumClass: Class<E>): E = valueOf(enumClass, data.getString(key))
+    fun <E : Enum<E>> getEnum(key: String, enumClass: Class<E>): E =
+        valueOf(enumClass, data.getString(key))
 
     fun getIntArray(key: String) = getArray(key, ::IntArray, JSONArray::getInt)
 
@@ -106,7 +110,7 @@ class Bundle private constructor(
 
     fun getBooleanArray(key: String) = getArray(key, ::BooleanArray, JSONArray::getBoolean)
 
-    fun getStringArray(key: String)  = getArray(key, ::Array, JSONArray::getString)
+    fun getStringArray(key: String) = getArray(key, ::Array, JSONArray::getString)
 
     fun getClassArray(key: String): Array<Class<*>> = getArray(key, ::Array) { index ->
         Reflection.forName(
@@ -132,12 +136,12 @@ class Bundle private constructor(
      * @param initArray The constructor for the array. Determines the return type of the function
      * @param getValue The method to be used to extract each value from the retrieved [JSONArray].
      */
-    private inline fun <R,RArray> getArray(
+    private inline fun <R, RArray> getArray(
         key: String,
         initArray: (size: Int, ((index: Int) -> R)) -> RArray,
         crossinline getValue: JSONArray.(index: Int) -> R,
     ) = data.getJSONArray(key).run {
-        initArray( length() ) { getValue(it) }
+        initArray(length()) { getValue(it) }
     }
 
     // endregion
@@ -189,7 +193,8 @@ class Bundle private constructor(
         data.put(key, value?.name)
     }
 
-    @JvmName("put") operator fun set(key: String, array: IntArray?) {
+    @JvmName("put")
+    operator fun set(key: String, array: IntArray?) {
         put(key, array, IntArray::forEachIndexed, JSONArray::put)
     }
 
@@ -235,10 +240,11 @@ class Bundle private constructor(
      * @param forEachIndexed the primitive array method corresponding to [Array.forEachIndexed]
      * @param putValue the corresponding put method from [JSONArray]
      */
-    private inline fun <T,TArray> put(
+    private inline fun <T, TArray> put(
         key: String, array: TArray?,
         forEachIndexed: TArray.(action: (index: Int, value: T) -> Unit) -> Unit,
-        crossinline putValue: JSONArray.(Int, T) -> Unit) {
+        crossinline putValue: JSONArray.(Int, T) -> Unit
+    ) {
         data.put(key, JSONArray().apply {
             array?.forEachIndexed { index, value -> putValue(index, value) }
         })
@@ -262,7 +268,9 @@ class Bundle private constructor(
      */
     fun toStream(stream: OutputStream, compressed: Boolean = COMPRESSION) {
         val writer =
-            if (compressed) BufferedWriter(OutputStreamWriter(GZIPOutputStream(stream, GZIP_BUFFER)))
+            if (compressed) BufferedWriter(
+                OutputStreamWriter(GZIPOutputStream(stream, GZIP_BUFFER))
+            )
             else BufferedWriter(OutputStreamWriter(stream))
         writer.write(data.toString()) // JSONObject.write doesn't exist on Android/iOS
         writer.close()
@@ -290,8 +298,8 @@ class Bundle private constructor(
 
             // JSONTokenizer only has a string-based constructor on Android/iOS.
             var json = JSONTokener(buildString {
-                BufferedReader( InputStreamReader(checkCompression(stream)) )
-                    .forEachLine { append(it + "\n") }
+                BufferedReader(InputStreamReader(checkCompression(stream)))
+                    .forEachLine { append("$it\n") }
             }).nextValue()
 
             // If the data is an array, put it in a fresh object with the default key.
